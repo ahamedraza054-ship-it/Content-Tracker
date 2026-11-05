@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Multi-Channel Content Scheduler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 900: '#0f1015', 800: '#181920', 700: '#22242d', 600: '#2f313c' },
+                        brand: { red: '#ff0033', darkred: '#cc0029', green: '#10b981', blue: '#3b82f6' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark-900 text-gray-100 min-h-screen font-sans selection:bg-brand-red selection:text-white">
+
+    <!-- Header -->
+    <header class="bg-dark-800 border-b border-dark-600 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-red p-2.5 rounded-xl text-white shadow-lg shadow-brand-red/20">
+                    <i class="fa-solid fa-clapperboard text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">Creator Content Hub</h1>
+                    <p class="text-xs text-gray-400">Multi-Channel Upload & Schedule Tracker</p>
+                </div>
+            </div>
+
+            <div class="flex bg-dark-700 p-1 rounded-xl border border-dark-600">
+                <button onclick="switchTab('entry')" id="tab-btn-entry" class="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-brand-red text-white shadow">
+                    <i class="fa-solid fa-calendar-plus mr-1.5"></i> 1. Daily Upload Entry
+                </button>
+                <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-chart-pie mr-1.5"></i> 2. Schedule & Analytics
+                </button>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="saveDataManually()" class="bg-brand-green hover:bg-emerald-600 text-white text-xs px-3.5 py-2 rounded-lg font-medium transition shadow flex items-center space-x-1.5">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Save Today's Progress</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6">
+
+        <!-- TAB 1: DAILY UPLOAD ENTRY -->
+        <div id="tab-entry" class="space-y-6">
+            <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center space-x-2 text-brand-red text-xs font-bold uppercase tracking-wider mb-1">
+                        <i class="fa-solid fa-calendar-day"></i>
+                        <span>Daily Upload Logger</span>
+                    </div>
+                    <h2 class="text-xl font-extrabold text-white">Record Today's Upload Progress</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Select a date and check off which videos were uploaded or missed across your 4 streams.</p>
+                </div>
+                <div class="flex items-center space-x-3 bg-dark-700 px-4 py-2.5 rounded-xl border border-dark-600">
+                    <label for="selectedDate" class="text-xs font-semibold text-gray-300">Target Date:</label>
+                    <input type="date" id="selectedDate" onchange="loadDateData()" class="bg-dark-900 border border-dark-600 text-white text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-brand-red">
+                </div>
+            </div>
+
+            <!-- Quick Presets -->
+            <div class="bg-dark-800/60 border border-dark-600/60 rounded-xl p-4">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2.5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400 mr-1"></i> Quick Presets for Selected Date:
+                </span>
+                <div class="flex flex-wrap gap-2.5">
+                    <button onclick="applyPreset('all-uploaded')" class="bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-600/40 text-emerald-300 text-xs px-3 py-1.5 rounded-lg font-medium transition">
+                        <i class="fa-solid fa-circle-check mr-1"></i> 4 Uploaded / 0 Missed
+                    </button>
+                    <button onclick="applyPreset('three-uploaded')" class="bg-blue-950/60 hover:bg-blue-900/60 border border-blue-600/40 text-blue-300 text-xs px-3 py-1.5 rounded-lg font-medium transition">
+                        <i class="fa-solid fa-circle-check mr-1"></i> 3 Uploaded / 1 Missed
+                    </button>
+                    <button onclick="applyPreset('two-uploaded')" class="bg-purple-950/60 hover:bg-purple-900/60 border border-purple-600/40 text-purple-300 text-xs px-3 py-1.5 rounded-lg font-medium transition">
+                        <i class="fa-solid fa-circle-check mr-1"></i> 2 Uploaded / 2 Missed
+                    </button>
+                    <button onclick="applyPreset('all-missed')" class="bg-rose-950/60 hover:bg-rose-900/60 border border-rose-600/40 text-rose-300 text-xs px-3 py-1.5 rounded-lg font-medium transition">
+                        <i class="fa-solid fa-circle-xmark mr-1"></i> 0 Uploaded / 4 Missed
+                    </button>
+                </div>
+            </div>
+
+            <!-- Channels Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Channel 1: Business & Innovation -->
+                <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4 pb-3 border-b border-dark-600">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-9 h-9 rounded-xl bg-cyan-950 border border-cyan-800 flex items-center justify-center text-cyan-400 font-bold text-sm">
+                                    C1
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-sm text-white">Channel 1: Business & Innovation</h3>
+                                    <span class="text-[11px] text-gray-400">2 Streams Managed</span>
+                                </div>
+                            </div>
+                            <span class="text-xs bg-dark-700 px-2.5 py-1 rounded-full text-cyan-300 font-medium border border-cyan-900">2 Streams</span>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Stream 1 -->
+                            <div class="bg-dark-700/60 p-3.5 rounded-xl border border-dark-600">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold text-gray-200">Boxabl Official Clipping </span>
+                                    <div class="flex space-x-1 bg-dark-900 p-0.5 rounded-lg border border-dark-600">
+                                        <button type="button" onclick="setStatus('ch1_s1', 'uploaded')" id="btn-ch1_s1-uploaded" class="status-btn px-2.5 py-1 text-[11px] font-semibold rounded-md transition text-gray-400">Uploaded</button>
+                                        <button type="button" onclick="setStatus('ch1_s1', 'missed')" id="btn-ch1_s1-missed" class="status-btn px-2.5 py-1 text-[11px] font-semibold rounded-md transition text-gray-400">Missed</button>
+                                    </div>
+                                </div>
+                                <input type="text" id="title-ch1_s1" placeholder="Video Title / Topic Note..." class="w-full bg-dark-900 border border-dark-600 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-red">
+                            </div>
+
+                            <!-- Stream 2 -->
+                            <div class="bg-dark-700/60 p-3.5 rounded-xl border border-dark-600">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold text-gray-200">JoDee Neil</span>
+                                    <div class="flex space-x-1 bg-dark-900 p-0.5 rounded-lg border border-dark-600">
+                                        <button type="button" onclick="setStatus('ch1_s2', 'uploaded')" id="btn-ch1_s2-uploaded" class="status-btn px-2.5 py-1 text-[11px] font-semibold rounded-md transition text-gray-400">Uploaded</button>
+                                        <button type="button" onclick="setStatus('ch1_s2', 'missed')" id="btn-ch1_s2-missed" class="status-btn px-2.5 py-1 text-[11px] font-semibold rounded-md transition text-gray-400">Missed</button>
+                                    </div>
+                                </div>
+                                <input type="text" id="title-ch1_s2" placeholder="Video Title / Topic Note..." class="w-full bg-dark-900 border border-dark-600 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-red">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Channel 2: Trading Clips -->
+                <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4 pb-3 border-b border-dark-600">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-9 h-9 rounded-xl bg-purple-950 border border-purple-800 flex items-center justify-center text-purple-400 font-bold text-sm">
+                                    C2
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-sm text-white">Channel 2: Trading Clips</h3>
+                                    <span class="text-[11px] text-gray-400">2 Streams Managed</span>
+                                </div>
+                            </div>
+                            <span class="text-xs bg-dark-700 px-2.5 py-1 rounded-full text-purple-300 font-medium border border-purple-900">2 Streams</span>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- Stream 3 -->
+                            <div class="bg-dark-700/60 p-3.5 rounded-xl border border-dark-600">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold text-gray-200">Fundingpips Clipping</span>
+                                    <div class="flex space-x-1 bg-dark-900 p-0.5 rounded-lg border border-dark-600">
+                                        <button type="button" onclick="setStatus('ch2_s1', 'uploaded')" id="btn-ch2_s1-uploaded" class="status-btn px-2.5 py-1 text-[11px] font-semibold rounded-md transition text-gray-400">Uploaded</button>
+                                        <button type="button" onclick="setStatus('ch2_s1', 'missed')" id="btn-ch2_s1-missed" class="status-btn px-2.5 py-1 text-[11px] font-semibold rounded-md transition text-gray-400">Missed</button>
+                                    </div>
+                                </div>
+                                <input type="text" id="title-ch2_s1" placeholder="Video Title / Topic Note..." class="w-full bg-dark-900 border border-dark-600 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-red">
+                            </div>
+
+                            <!-- Stream 4 -->
+                            <div class="bg-dark-700/60 p-3.5 rounded-xl border border-dark-600">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs font-bold text-gray-200">MCs Clippers</span>
+                                    <div class="flex space-x-1 bg-dark-900 p-0.5 rounded-lg border border-dark-600">
+                                        <button type="button" onclick="setStatus('ch2_s2', 'uploaded')" id="btn-ch2_s2-uploaded" class="status-btn px-2.5 py-1 text-[11px] font-semibold rounded-md transition text-gray-400">Uploaded</button>
+                                        <button type="button" onclick="setStatus('ch2_s2', 'missed')" id="btn-ch2_s2-missed" class="status-btn px-2.5 py-1 text-[11px] font-semibold rounded-md transition text-gray-400">Missed</button>
+                                    </div>
+                                </div>
+                                <input type="text" id="title-ch2_s2" placeholder="Video Title / Topic Note..." class="w-full bg-dark-900 border border-dark-600 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-red">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB 2: SCHEDULE & ANALYTICS -->
+        <div id="tab-analytics" class="space-y-6 hidden">
+            <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center space-x-2 text-brand-red text-xs font-bold uppercase tracking-wider mb-1">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Detailed Schedule Analytics</span>
+                    </div>
+                    <h2 class="text-xl font-extrabold text-white">Stream-by-Stream Performance Breakdown</h2>
+                    <p class="text-xs text-gray-400 mt-0.5">Check exactly which content stream is performing regularly and which one has missed uploads.</p>
+                </div>
+            </div>
+
+            <!-- Per-Stream Breakdown Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="streamStatsContainer">
+                <!-- Dynamically populated via JS -->
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Monthly Calendar View -->
+                <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 shadow-lg lg:col-span-1">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-sm text-white">Monthly Overview</h3>
+                        <span id="currentMonthYear" class="text-xs text-gray-400 font-medium"></span>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-gray-400 mb-2">
+                        <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+                    </div>
+                    <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1.5 text-center text-xs">
+                        <!-- Generated by JS -->
+                    </div>
+                </div>
+
+                <!-- Consistency Chart -->
+                <div class="bg-dark-800 border border-dark-600 rounded-2xl p-5 shadow-lg lg:col-span-2 flex flex-col">
+                    <h3 class="font-bold text-sm text-white mb-2">Daily Upload Consistency (Last 14 Days)</h3>
+                    <p class="text-xs text-gray-400 mb-4">Total uploads logged per day across all 4 streams.</p>
+                    <div class="flex-grow relative h-64">
+                        <canvas id="consistencyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const streams = [
+            { id: 'ch1_s1', name: 'Boxabl Official Clipping', channel: 'Business & Innovation' },
+            { id: 'ch1_s2', name: 'JoDee Neil Clipping', channel: 'Business & Innovation' },
+            { id: 'ch2_s1', name: 'Fundingpips Clipping', channel: 'Trading Clips' },
+            { id: 'ch2_s2', name: 'MCs Clippers | Clipping', channel: 'Trading Clips' }
+        ];
+
+        let db = JSON.parse(localStorage.getItem('yt_content_db') || '{}');
+        let currentTab = 'entry';
+        let chartInstance = null;
+
+        document.getElementById('selectedDate').valueAsDate = new Date();
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-entry').classList.toggle('hidden', tab !== 'entry');
+            document.getElementById('tab-analytics').classList.toggle('hidden', tab !== 'analytics');
+
+            document.getElementById('tab-btn-entry').className = tab === 'entry' ? 'px-4 py-2 rounded-lg text-sm font-medium transition-all bg-brand-red text-white shadow' : 'px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-400 hover:text-white';
+            document.getElementById('tab-btn-analytics').className = tab === 'analytics' ? 'px-4 py-2 rounded-lg text-sm font-medium transition-all bg-brand-red text-white shadow' : 'px-4 py-2 rounded-lg text-sm font-medium transition-all text-gray-400 hover:text-white';
+
+            if (tab === 'analytics') {
+                renderAnalytics();
+            }
+        }
+
+        function getDateKey() {
+            return document.getElementById('selectedDate').value;
+        }
+
+        function loadDateData() {
+            const dateKey = getDateKey();
+            const dayData = db[dateKey] || {};
+
+            streams.forEach(stream => {
+                const sData = dayData[stream.id] || { status: 'none', title: '' };
+                setStatusUI(stream.id, sData.status);
+                document.getElementById(`title-${stream.id}`).value = sData.title || '';
+            });
+        }
+
+        function setStatus(streamId, status) {
+            const dateKey = getDateKey();
+            if (!db[dateKey]) db[dateKey] = {};
+            if (!db[dateKey][streamId]) db[dateKey][streamId] = {};
+
+            if (db[dateKey][streamId].status === status) {
+                db[dateKey][streamId].status = 'none';
+            } else {
+                db[dateKey][streamId].status = status;
+            }
+            setStatusUI(streamId, db[dateKey][streamId].status);
+            autoSave();
+        }
+
+        function setStatusUI(streamId, status) {
+            const btnU = document.getElementById(`btn-${streamId}-uploaded`);
+            const btnM = document.getElementById(`btn-${streamId}-missed`);
+
+            btnU.className = "status-btn px-2.5 py-1 text-[11px] font-semibold rounded-md transition " + (status === 'uploaded' ? 'bg-emerald-600 text-white shadow' : 'text-gray-400 hover:text-white');
+            btnM.className = "status-btn px-2.5 py-1 text-[11px] font-semibold rounded-md transition " + (status === 'missed' ? 'bg-rose-600 text-white shadow' : 'text-gray-400 hover:text-white');
+        }
+
+        function autoSave() {
+            const dateKey = getDateKey();
+            if (!db[dateKey]) db[dateKey] = {};
+            streams.forEach(stream => {
+                if (!db[dateKey][stream.id]) db[dateKey][stream.id] = {};
+                db[dateKey][stream.id].title = document.getElementById(`title-${stream.id}`).value;
+            });
+            localStorage.setItem('yt_content_db', JSON.stringify(db));
+        }
+
+        function saveDataManually() {
+            autoSave();
+            alert("Your upload progress for this date has been successfully saved!");
+        }
+
+        function applyPreset(type) {
+            const dateKey = getDateKey();
+            if (!db[dateKey]) db[dateKey] = {};
+
+            streams.forEach((stream, idx) => {
+                if (!db[dateKey][stream.id]) db[dateKey][stream.id] = {};
+                if (type === 'all-uploaded') db[dateKey][stream.id].status = 'uploaded';
+                else if (type === 'all-missed') db[dateKey][stream.id].status = 'missed';
+                else if (type === 'three-uploaded') db[dateKey][stream.id].status = idx < 3 ? 'uploaded' : 'missed';
+                else if (type === 'two-uploaded') db[dateKey][stream.id].status = idx < 2 ? 'uploaded' : 'missed';
+            });
+            loadDateData();
+            autoSave();
+        }
+
+        function renderAnalytics() {
+            autoSave();
+            const container = document.getElementById('streamStatsContainer');
+            container.innerHTML = '';
+
+            let streamStats = {};
+            streams.forEach(s => streamStats[s.id] = { uploaded: 0, missed: 0, name: s.name, channel: s.channel });
+
+            Object.keys(db).forEach(date => {
+                streams.forEach(s => {
+                    const st = db[date][s.id]?.status;
+                    if (st === 'uploaded') streamStats[s.id].uploaded++;
+                    if (st === 'missed') streamStats[s.id].missed++;
+                });
+            });
+
+            streams.forEach(s => {
+                const stat = streamStats[s.id];
+                const total = stat.uploaded + stat.missed;
+                const rate = total > 0 ? Math.round((stat.uploaded / total) * 100) : 0;
+
+                container.innerHTML += `
+                    <div class="bg-dark-700/80 border border-dark-600 rounded-2xl p-4 flex flex-col justify-between">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">${stat.channel}</span>
+                            <h4 class="font-bold text-sm text-white mt-0.5 mb-3">${stat.name}</h4>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-emerald-400"><i class="fa-solid fa-circle-check mr-1"></i> Uploaded: ${stat.uploaded}</span>
+                                <span class="text-rose-400"><i class="fa-solid fa-circle-xmark mr-1"></i> Missed: ${stat.missed}</span>
+                            </div>
+                            <div class="w-full bg-dark-900 rounded-full h-2 overflow-hidden border border-dark-600">
+                                <div class="bg-brand-red h-full rounded-full" style="width: ${rate}%"></div>
+                            </div>
+                            <div class="text-right text-[11px] text-gray-400 font-semibold">Success Rate: ${rate}%</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            renderCalendar();
+            renderChart();
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendarDaysGrid');
+            grid.innerHTML = '';
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+
+            document.getElementById('currentMonthYear').innerText = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += `<div></div>`;
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayData = db[dStr] || {};
+                let hasUpload = false;
+                let hasMissed = false;
+
+                streams.forEach(s => {
+                    if (dayData[s.id]?.status === 'uploaded') hasUpload = true;
+                    if (dayData[s.id]?.status === 'missed') hasMissed = true;
+                });
+
+                let badgeColor = 'bg-dark-700 text-gray-300';
+                if (hasUpload && !hasMissed) badgeColor = 'bg-emerald-950 text-emerald-400 border border-emerald-800';
+                else if (hasMissed && !hasUpload) badgeColor = 'bg-rose-950 text-rose-400 border border-rose-800';
+                else if (hasUpload && hasMissed) badgeColor = 'bg-amber-950 text-amber-400 border border-amber-800';
+
+                grid.innerHTML += `<div class="py-1.5 rounded-lg text-xs font-semibold ${badgeColor}">${d}</div>`;
+            }
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('consistencyChart').getContext('2d');
+            const labels = [];
+            const dataCounts = [];
+
+            for (let i = 13; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
+                labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+                let count = 0;
+                if (db[dStr]) {
+                    streams.forEach(s => {
+                        if (db[dStr][s.id]?.status === 'uploaded') count++;
+                    });
+                }
+                dataCounts.push(count);
+            }
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Videos Uploaded',
+                        data: dataCounts,
+                        backgroundColor: '#ff0033',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 4,
+                            ticks: { stepSize: 1, color: '#9ca3af' },
+                            grid: { color: '#2f313c' }
+                        },
+                        x: {
+                            ticks: { color: '#9ca3af' },
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        loadDateData();
+    </script>
+</body>
+</html>
